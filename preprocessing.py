@@ -4,12 +4,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import shutil
 from scipy.misc import imresize
+import cv2
 
 fig = plt.figure()
 
 auth_string = 'arctic:domain'
 
-
+fgbg = cv2.createBackgroundSubtractorMOG2()
 
 def acquire_data(label,directory,start,end):
 	if not os.path.exists(directory):
@@ -45,17 +46,22 @@ def imcrop_tosquare(img):
         crop = np.take(crop, extra[i] // 2 + np.r_[:size], axis=i)
     return crop
 
+def bg_subtract(fname):
+	frame = plt.imread(fname)
+	return fgbg.apply(frame)
 
 def get_img_array(start,end):
 	np_file_p = 'numpy_files/%d_%d_p.npy'%(start,end)
 	np_file_n = 'numpy_files/%d_%d_n.npy'%(start,end)
 	if not os.path.exists(np_file_p):
 		acquire_data('P','database/p/',start,end)
-		p_filenames = [ 'database/p/frame%08d.jpg'%f for f in range(100)]	
+		p_filenames = [ 'database/p/frame%08d.jpg'%f for f in range(start,end)]	
+		#p_imgs = [bg_subtract(fname)[..., :3] for fname in p_filenames]
 		p_imgs = [plt.imread(fname)[..., :3] for fname in p_filenames]
+		
 		p_imgs = [imresize(img,(100,100)) for img in p_imgs ]
 		p_imgs = np.array(p_imgs).astype(np.float32)
-		shutil.rmtree('database/p/')
+		#shutil.rmtree('database/p/')
 		if not os.path.exists('numpy_files/'):
 			os.makedirs('numpy_files/')
 		np.save(np_file_p,p_imgs)
@@ -64,11 +70,11 @@ def get_img_array(start,end):
 		p_imgs = np.load(np_file_p)
 	if not os.path.exists(np_file_n):
 		acquire_data('N','database/n/',start,end)
-		n_filenames = [ 'database/n/frame%08d.jpg'%f for f in range(100)]
+		n_filenames = [ 'database/n/frame%08d.jpg'%f for f in range(start,end)]
 		n_imgs = [plt.imread(fname)[..., :3] for fname in n_filenames]
 		n_imgs = [imresize(img,(100,100)) for img in n_imgs ]
 		n_imgs = np.array(n_imgs).astype(np.float32)
-		shutil.rmtree('database/n/')
+		#shutil.rmtree('database/n/')
 		if not os.path.exists('numpy_files/'):
 			os.makedirs('numpy_files/')
 		np.save(np_file_n,p_imgs)
@@ -79,7 +85,13 @@ def get_img_array(start,end):
 
 	#print(p_imgs,n_imgs)
 	print(p_imgs.shape,n_imgs.shape)
+	return p_imgs,n_imgs
 	
 
-get_img_array(0,100)
+for i in range(15):
+	start = i*200
+	end = start+200
+	get_img_array(start,end)
+get_img_array(185,712)
+get_img_array(1503,1568)
 #acquire_data('P','database',100)
